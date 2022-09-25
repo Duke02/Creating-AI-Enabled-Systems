@@ -35,7 +35,6 @@ class NlpAnalyzer:
 
     def tokenize(self, do_punctuation: bool = False) -> pd.Series:
         """
-
         Tokenizes the summary column in the inputted data.
 
         :param do_punctuation: True - tokenize alphanumeric text separate from punctuation. False (default), treat punctuation as a word.
@@ -123,6 +122,7 @@ if __name__ == '__main__':
     nltk.download('punkt')
     nltk.download('averaged_perceptron_tagger')
     nltk.download('wordnet')
+    nltk.download('omw-1.4')
 
     print('Done downloading required NLTK libraries!')
 
