@@ -16,7 +16,7 @@ class NlpAnalyzer:
             path!
         """
         if data_path is None:
-            self.data_path: str = os.path.join('.', 'data', 'Assign3', 'Musical_instruments_reviews.csv')
+            self.data_path: str = os.path.join('.', 'data', 'music_reviews.csv')
         else:
             self.data_path: str = data_path
 
@@ -115,3 +115,30 @@ class NlpAnalyzer:
             print(f'\tStemmed: {stemmed}')
             print(f'\tLemmatized: {lemmatized}')
 
+
+if __name__ == '__main__':
+    print('Starting execution of NLP Analyzer!')
+
+    print('Downloading required NLTK libraries...')
+    nltk.download('punkt')
+    nltk.download('averaged_perceptron_tagger')
+    nltk.download('wordnet')
+
+    print('Done downloading required NLTK libraries!')
+
+    analyzer: NlpAnalyzer = NlpAnalyzer()
+
+    print('Loading data...')
+    analyzer.load_data()
+
+    print('Tokenizing data...')
+    analyzer.tokenize()
+
+    print('Stemming data...')
+    analyzer.stem()
+
+    print('Lemmatizing data...')
+    analyzer.lemmatize()
+
+    print('Printing results!')
+    analyzer.print_examples()
