@@ -1,0 +1,26 @@
+Summary:
+1. Write Jupyter notebook code.
+2. Write Python script with main script.
+3. Write Docker file that contains Python script and data files and requirements.txt
+4. Write up your submission.txt file with Docker link and GitHub.
+
+If you need help, look at assign3/*
+
+Commands:
+(normal Python ones)
+
+- list docker images
+$ docker images
+
+- list currently running docker images
+$ docker ps
+
+- build docker file
+$ docker build --pull -f ./path/to/assignment.dockerfile -t duke0200/create-ai-systems:assignment# .
+
+- run docker image
+$ docker run duke0200/create-ai-systems:assignment#
+
+- Push to dockerhub
+$ docker push duke0200/create-ai-systems:assignment#
+
