@@ -79,19 +79,35 @@ def smooth(a: np.ndarray, window_size: int):
     return np.concatenate((start, out0, stop))
 
 
-if __name__ == "__main__":
-    base_data_dir: str = os.path.join('..', 'data', 'SemesterProject')
+def fill_skeleton(skeleton: np.ndarray, desired_length: int) -> np.ndarray:
+    new_skeleton: np.ndarray = np.zeros((skeleton.shape[0], skeleton.shape[1], desired_length))
 
-    # I think I'm gonna work with the Kinect since that one is one I can get a hold of if I need to.
+    n_repeats: int = desired_length // skeleton.shape[-1]
+    num_intermediate_frames: int = n_repeats * skeleton.shape[-1]
+    diff_frames: int = desired_length - num_intermediate_frames
 
-    # Going based on animation.m from the source.
+    intermediate_array: np.ndarray = np.repeat(skeleton, n_repeats, axis=2)
 
-    kinect_pos_base_dir: str = os.path.join(base_data_dir, 'Segmented Movements', 'Kinect', 'Positions')
-    kinect_ang_base_dir: str = os.path.join(base_data_dir, 'Segmented Movements', 'Kinect', 'Angles')
+    new_skeleton[:, :, :num_intermediate_frames] = intermediate_array
+    new_skeleton[:, :, num_intermediate_frames:] = skeleton[:, :, :diff_frames]
 
-    parser_pattern: re.Pattern = re.compile(r'm(?P<movement>\d{2})_s(?P<subject>\d{2})_e(?P<episode>\d{2}).*s\.txt')
+    return new_skeleton
 
-    correct_movements: tp.List[tp.Dict[str, tp.Union[np.ndarray, int]]] = []
+
+def process_data(base_dir: str) -> str:
+    if not base_dir.endswith('Segmented Movements'):
+        raise ValueError(
+            f'Cannot process path "{base_dir}" as it does not include Segmented Movements at the end of its path!')
+
+    kinect_pos_base_dir: str = os.path.join(base_dir, 'Kinect', 'Positions')
+    kinect_ang_base_dir: str = os.path.join(base_dir, 'Kinect', 'Angles')
+
+    parser_pattern: re.Pattern = re.compile(
+        r'm(?P<movement>\d{2})_s(?P<subject>\d{2})_e(?P<episode>\d{2})_(?P<name>.+)s(_inc)?\.txt')
+
+    segmented_movements: tp.List[tp.Dict[str, tp.Union[np.ndarray, int]]] = []
+
+    is_correct_movements: bool = not base_dir.endswith('Incorrect Segmented Movements')
 
     """
         % 1 Waist (absolute)
@@ -118,22 +134,25 @@ if __name__ == "__main__":
     % 22 Right leg toes
         """
 
-    joint_connections: np.ndarray = np.array([[4, 6, 5, 3, 2, 3, 7, 8, 9, 3, 11, 12, 13, 1, 15, 16, 17, 1, 19, 20, 21],
-                                              [3, 5, 3, 2, 1, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21,
-                                               22]])
-
     for fp in os.listdir(kinect_pos_base_dir):
         parsed_match: re.Match = parser_pattern.match(fp)
+
+        if parsed_match is None:
+            continue
+
         movement_id: int = int(parsed_match['movement'])
         subject_id: int = int(parsed_match['subject'])
         episode_num: int = int(parsed_match['episode'])
 
-        print(f'Currently processing movement id {movement_id} / subject id {subject_id} / episode num {episode_num}')
+        print(
+            f'Currently processing movement id {movement_id} / subject id {subject_id} / episode num {episode_num} / Correct? {is_correct_movements}')
+
+        incorrect_path_mod: str = '_inc' if not is_correct_movements else ''
 
         pos_path: str = os.path.join(kinect_pos_base_dir,
-                                     f'm{movement_id:02}_s{subject_id:02}_e{episode_num:02}_positions.txt')
+                                     f'm{movement_id:02}_s{subject_id:02}_e{episode_num:02}_positions{incorrect_path_mod}.txt')
         ang_path: str = os.path.join(kinect_ang_base_dir,
-                                     f'm{movement_id:02}_s{subject_id:02}_e{episode_num:02}_angles.txt')
+                                     f'm{movement_id:02}_s{subject_id:02}_e{episode_num:02}_angles{incorrect_path_mod}.txt')
 
         if not os.path.exists(pos_path) or not os.path.exists(ang_path):
             continue
@@ -216,16 +235,37 @@ if __name__ == "__main__":
 
             skeleton[:, :, i] = joint
 
-        correct_movements.append(
+        segmented_movements.append(
             {'movement_id': movement_id, 'subject_id': subject_id, 'episode_num': episode_num, 'positions': pos_array,
-             'angles': ang_array, 'positions_path': pos_path, 'angles_path': ang_path, 'skeleton': skeleton})
+             'angles': ang_array, 'positions_path': pos_path, 'angles_path': ang_path, 'skeleton': skeleton,
+             'is_correct_movements': is_correct_movements})
 
-    df: pd.DataFrame = pd.DataFrame.from_records(correct_movements)
+    df: pd.DataFrame = pd.DataFrame.from_records(segmented_movements)
 
     df['movement_name'] = df['movement_id'].map(movement_name)
-    df['reshaped_skeleton'] = df['skeleton'].apply(lambda s: s.reshape((-1, 22, 3)))
 
-    save_path: str = os.path.join('..', 'data', 'SemesterProject', 'processed_data.pkl')
+    max_len: int = int(df['skeleton'].apply(lambda s: s.shape[-1]).max())
+
+    df['filled_skeleton'] = df['skeleton'].apply(lambda s: fill_skeleton(s, max_len))
+    df['reshaped_skeleton'] = df['filled_skeleton'].apply(lambda s: s.reshape((-1, 22, 3)))
+
+    correct_movement_str_mod: str = '' if is_correct_movements else '_incorrect'
+
+    save_path: str = os.path.join('..', 'data', 'SemesterProject', f'processed_data{correct_movement_str_mod}.pkl')
     df.to_pickle(path=save_path)
 
     print(f'Done! Saved data to "{save_path}"')
+
+    return save_path
+
+
+if __name__ == "__main__":
+    base_data_dir: str = os.path.join('..', 'data', 'SemesterProject')
+
+    correct_movements: str = os.path.join(base_data_dir, 'Segmented Movements')
+    incorrect_movements: str = os.path.join(base_data_dir, 'Incorrect Segmented Movements')
+
+    print('Parsing correct movements first!')
+    process_data(correct_movements)
+    print('Parsing incorrect movements now!')
+    process_data(incorrect_movements)
