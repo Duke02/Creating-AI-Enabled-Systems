@@ -3,5 +3,6 @@ data/*
 .idea/*
 submissions_texts/*
 libraries/**
+.ipynb_checkpoints
 !.gitkeep
 HOW-TO-DO-HOMEWORK

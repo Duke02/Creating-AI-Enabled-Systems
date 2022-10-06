@@ -244,7 +244,10 @@ def process_data(base_dir: str) -> str:
 
     df['movement_name'] = df['movement_id'].map(movement_name)
 
-    max_len: int = int(df['skeleton'].apply(lambda s: s.shape[-1]).max())
+    # apparently the incorrect exercises has a max number of frames of 179, so let's
+    # make it at least that value.
+    # Previously: int(df['skeleton'].apply(lambda s: s.shape[-1]).max())
+    max_len: int = 180
 
     df['filled_skeleton'] = df['skeleton'].apply(lambda s: fill_skeleton(s, max_len))
     df['reshaped_skeleton'] = df['filled_skeleton'].apply(lambda s: s.reshape((-1, 22, 3)))
