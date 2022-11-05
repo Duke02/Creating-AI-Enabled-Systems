@@ -5,7 +5,8 @@ from sklearn.base import ClusterMixin
 import numpy as np
 from sklearn.metrics import fowlkes_mallows_score, davies_bouldin_score
 from sklearn.cluster import KMeans, SpectralClustering, BisectingKMeans, AgglomerativeClustering
-from sklearn.datasets import make_blobs, load_iris, load_wine
+from sklearn.datasets import make_blobs, load_iris, load_wine, fetch_openml
+from sklearn.model_selection import train_test_split
 import os
 
 
@@ -54,7 +55,7 @@ def create_kmeans_model(num_clusters: int) -> KMeans:
 
 
 def create_spectral_model(num_clusters: int) -> SpectralClustering:
-    return SpectralClustering(n_clusters=num_clusters, random_state=13, assign_labels='cluster_qr')
+    return SpectralClustering(n_clusters=num_clusters, random_state=13, assign_labels='cluster_qr', eigen_solver='amg')
 
 
 def create_agglomerative_model(num_clusters: int) -> AgglomerativeClustering:
@@ -130,16 +131,24 @@ if __name__ == "__main__":
     wine_x, wine_y = load_wine(as_frame=False, return_X_y=True)
     iris_x, iris_y = load_iris(return_X_y=True)
     blob_x, blob_y = make_blobs(n_samples=1_000, n_features=2, centers=5, random_state=13, center_box=(-50, 50))
+    mnist_x, mnist_y = fetch_openml(data_id=554, return_X_y=True)
+
+    mnist_x = mnist_x.values / 255
+    mnist_y = mnist_y.values
+
+    mnist_x, _, mnist_y, _ = train_test_split(mnist_x, mnist_y, train_size=.25, random_state=13, shuffle=True)
 
     num_wine_classes: int = np.unique(wine_y).size
     num_iris_classes: int = np.unique(iris_y).size
     num_blob_classes: int = np.unique(blob_y).size
+    num_mnist_classes: int = np.unique(mnist_y).size
 
     results_dl: tp.List[tp.Dict[str, tp.Union[str, bool, int, float]]] = []
 
     datasets: tp.List[tp.Tuple[str, int, np.ndarray, np.ndarray]] = [('Wine', num_wine_classes, wine_x, wine_y),
                                                                      ('Iris', num_iris_classes, iris_x, iris_y),
-                                                                     ('Blobs', num_blob_classes, blob_x, blob_y)]
+                                                                     ('Blobs', num_blob_classes, blob_x, blob_y),
+                                                                     ('MNIST', num_mnist_classes, mnist_x, mnist_y)]
 
     models: tp.List[tp.Tuple[str, tp.Any]] = [('K-Means++', create_kmeans_model), ('Spectral', create_spectral_model),
                                               ('Agglomerative', create_agglomerative_model),
@@ -166,7 +175,7 @@ if __name__ == "__main__":
 
             results_dl.append(results)
 
-    save_path: str = os.path.join('.', 'results.csv')
+    save_path: str = os.path.join('.', 'alg_results.csv')
 
     print(f'Saving results to "{save_path}"...')
 
