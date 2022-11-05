@@ -129,7 +129,7 @@ def determine_best_num_clusters(cluster_gen_function: tp.Callable[[int], Cluster
 if __name__ == "__main__":
     wine_x, wine_y = load_wine(as_frame=False, return_X_y=True)
     iris_x, iris_y = load_iris(return_X_y=True)
-    blob_x, blob_y = make_blobs(n_samples=500, n_features=6, centers=10, random_state=13)
+    blob_x, blob_y = make_blobs(n_samples=1_000, n_features=2, centers=5, random_state=13, center_box=(-50, 50))
 
     num_wine_classes: int = np.unique(wine_y).size
     num_iris_classes: int = np.unique(iris_y).size
